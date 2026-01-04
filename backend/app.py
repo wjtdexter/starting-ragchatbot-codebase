@@ -30,6 +30,13 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
+# TODO: remove this later, just for testing
+@app.get("/math/fib/{n}")
+def calc_fib(n: int):
+    # This is a bad implementation (slow recursion)
+    if n <= 1: return n
+    return calc_fib(n-1) + calc_fib(n-2)
+
 # Initialize RAG system
 rag_system = RAGSystem(config)
 

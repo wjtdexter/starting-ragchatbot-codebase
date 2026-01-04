@@ -70,3 +70,29 @@ max-line-length = 100
 extend-ignore = ["E203", "W503", "E501"]
 exclude = [".git", "__pycache__", "venv", "build", "dist", "chroma_db", "frontend"]
 max-complexity = 10
+
+# ========== 测试配置 ==========
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+addopts = [
+    "-ra",
+    "-q",
+    "--strict-markers",
+    "--cov=backend",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--asyncio-mode=auto"
+]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::ResourceWarning"
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "api: API endpoint tests",
+    "slow: Slow running tests"
+]

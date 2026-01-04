@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(kill:*)",
+      "Bash(./run.sh:*)",
+      "Bash(curl:*)",
+      "Bash(sh:*)",
+      "Bash(~/.local/bin/uv run:*)",
+      "Bash(cat:*)",
+      "Bash(lsof:*)",
+      "Bash(uv run uvicorn:*)",
+      "Bash(xargs kill:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_evaluate",
+      "Bash(cd:*)",
+      "Bash(pkill:*)",
+      "mcp__playwright__browser_close",
+      "Bash(uv run python:*)",
+      "Bash(python3:*)",
+      "Bash(uv run python3:*)",
+      "Bash(find:*)",
+      "Bash(test:*)",
+      "Bash(uv add:*)",
+      "Bash(uv run pytest:*)"
+    ]
+  }
+}

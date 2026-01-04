@@ -38,6 +38,12 @@ function setupEventListeners() {
             sendMessage();
         });
     });
+
+    // New Chat button
+    const newChatBtn = document.getElementById('newChatBtn');
+    if (newChatBtn) {
+        newChatBtn.addEventListener('click', handleNewChat);
+    }
 }
 
 
@@ -122,10 +128,11 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
+        const sourcesHtml = sources.map(source => source.trim()).filter(s => s).join('');
         html += `
-            <details class="sources-collapsible">
+            <details class="sources-collapsible" open>
                 <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
+                <div class="sources-content">${sourcesHtml}</div>
             </details>
         `;
     }
@@ -150,6 +157,31 @@ async function createNewSession() {
     currentSessionId = null;
     chatMessages.innerHTML = '';
     addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
+}
+
+async function handleNewChat() {
+    // Visual feedback - temporarily disable button
+    const newChatBtn = document.getElementById('newChatBtn');
+    if (newChatBtn) {
+        newChatBtn.disabled = true;
+        newChatBtn.textContent = 'Clearing...';
+    }
+
+    // Clear the current session
+    await createNewSession();
+
+    // Re-enable button after delay
+    setTimeout(() => {
+        if (newChatBtn) {
+            newChatBtn.disabled = false;
+            newChatBtn.innerHTML = '<span class="new-chat-icon">+</span><span class="new-chat-text">NEW CHAT</span>';
+        }
+    }, 500);
+
+    // Focus on input for immediate typing
+    if (chatInput) {
+        chatInput.focus();
+    }
 }
 
 // Load course statistics

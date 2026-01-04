@@ -1,7 +1,9 @@
 """Tests for CourseSearchTool execute method"""
 
+from unittest.mock import MagicMock, Mock
+
 import pytest
-from unittest.mock import Mock, MagicMock
+
 from search_tools import CourseSearchTool
 from vector_store import SearchResults
 
@@ -28,12 +30,9 @@ class TestCourseSearchTool:
         # Prepare mock search results
         mock_results = SearchResults(
             documents=["Content about embeddings"],
-            metadata=[{
-                'course_title': 'Introduction to RAG',
-                'lesson_number': 1
-            }],
+            metadata=[{"course_title": "Introduction to RAG", "lesson_number": 1}],
             distances=[0.23],
-            error=None
+            error=None,
         )
         mock_vector_store.search.return_value = mock_results
 
@@ -45,20 +44,13 @@ class TestCourseSearchTool:
         assert "Content about embeddings" in result
         assert search_tool.last_sources  # Should track sources
         mock_vector_store.search.assert_called_once_with(
-            query="embeddings",
-            course_name=None,
-            lesson_number=None
+            query="embeddings", course_name=None, lesson_number=None
         )
 
     def test_execute_with_no_results(self, search_tool, mock_vector_store):
         """Test: Empty results scenario"""
         # Mock empty results
-        mock_results = SearchResults(
-            documents=[],
-            metadata=[],
-            distances=[],
-            error=None
-        )
+        mock_results = SearchResults(documents=[], metadata=[], distances=[], error=None)
         mock_vector_store.search.return_value = mock_results
 
         # Execute search
@@ -72,23 +64,18 @@ class TestCourseSearchTool:
         """Test: Search with course name filter"""
         mock_results = SearchResults(
             documents=["RAG content"],
-            metadata=[{'course_title': 'RAG Course', 'lesson_number': 1}],
+            metadata=[{"course_title": "RAG Course", "lesson_number": 1}],
             distances=[0.1],
-            error=None
+            error=None,
         )
         mock_vector_store.search.return_value = mock_results
 
         # Execute search with course filter
-        result = search_tool.execute(
-            query="embeddings",
-            course_name="RAG"
-        )
+        result = search_tool.execute(query="embeddings", course_name="RAG")
 
         # Verify parameters passed correctly
         mock_vector_store.search.assert_called_once_with(
-            query="embeddings",
-            course_name="RAG",
-            lesson_number=None
+            query="embeddings", course_name="RAG", lesson_number=None
         )
         assert "RAG Course" in result
 
@@ -96,21 +83,16 @@ class TestCourseSearchTool:
         """Test: Search with lesson number filter"""
         mock_results = SearchResults(
             documents=["Lesson 2 content"],
-            metadata=[{'course_title': 'Course', 'lesson_number': 2}],
+            metadata=[{"course_title": "Course", "lesson_number": 2}],
             distances=[0.1],
-            error=None
+            error=None,
         )
         mock_vector_store.search.return_value = mock_results
 
-        result = search_tool.execute(
-            query="topic",
-            lesson_number=2
-        )
+        result = search_tool.execute(query="topic", lesson_number=2)
 
         mock_vector_store.search.assert_called_once_with(
-            query="topic",
-            course_name=None,
-            lesson_number=2
+            query="topic", course_name=None, lesson_number=2
         )
 
     def test_execute_with_search_error(self, search_tool, mock_vector_store):
@@ -129,22 +111,16 @@ class TestCourseSearchTool:
         """Test: Search with both course and lesson filters"""
         mock_results = SearchResults(
             documents=["Filtered content"],
-            metadata=[{'course_title': 'Course', 'lesson_number': 3}],
+            metadata=[{"course_title": "Course", "lesson_number": 3}],
             distances=[0.1],
-            error=None
+            error=None,
         )
         mock_vector_store.search.return_value = mock_results
 
-        result = search_tool.execute(
-            query="test",
-            course_name="Course",
-            lesson_number=3
-        )
+        result = search_tool.execute(query="test", course_name="Course", lesson_number=3)
 
         mock_vector_store.search.assert_called_once_with(
-            query="test",
-            course_name="Course",
-            lesson_number=3
+            query="test", course_name="Course", lesson_number=3
         )
 
     def test_get_tool_definition(self, search_tool):

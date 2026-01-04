@@ -1,8 +1,10 @@
-import anthropic
 import logging
-from typing import List, Optional, Dict, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+import anthropic
 
 logger = logging.getLogger(__name__)
+
 
 class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
@@ -53,19 +55,18 @@ Provide only the direct answer to what was asked.
         self.model = model
 
         # Pre-build base API parameters
-        self.base_params = {
-            "model": self.model,
-            "temperature": 0,
-            "max_tokens": 800
-        }
+        self.base_params = {"model": self.model, "temperature": 0, "max_tokens": 800}
 
         # Maximum rounds of tool calling
         self.max_tool_rounds = 2
-    
-    def generate_response(self, query: str,
-                         conversation_history: Optional[str] = None,
-                         tools: Optional[List] = None,
-                         tool_manager=None) -> str:
+
+    def generate_response(
+        self,
+        query: str,
+        conversation_history: Optional[str] = None,
+        tools: Optional[List] = None,
+        tool_manager=None,
+    ) -> str:
         """
         Generate AI response with optional tool usage and conversation context.
 
@@ -93,16 +94,13 @@ Provide only the direct answer to what was asked.
             return self._execute_tool_rounds(messages, system_content, tools, tool_manager)
 
         # No tools: direct API call
-        api_params = {
-            **self.base_params,
-            "messages": messages,
-            "system": system_content
-        }
+        api_params = {**self.base_params, "messages": messages, "system": system_content}
         response = self.client.messages.create(**api_params)
         return response.content[0].text
 
-    def _execute_tool_rounds(self, messages: List[Dict], system_content: str,
-                            tools: List, tool_manager) -> str:
+    def _execute_tool_rounds(
+        self, messages: List[Dict], system_content: str, tools: List, tool_manager
+    ) -> str:
         """
         Execute multiple rounds of tool calling (max 2 rounds).
 
@@ -119,9 +117,7 @@ Provide only the direct answer to what was asked.
             logger.info(f"工具调用轮次 {round_num}/{self.max_tool_rounds}")
 
             # A. Call Claude API
-            response_text, tool_blocks = self._call_claude_api(
-                messages, system_content, tools
-            )
+            response_text, tool_blocks = self._call_claude_api(messages, system_content, tools)
 
             # B. Check if Claude wants to use tools
             if not tool_blocks:
@@ -133,9 +129,7 @@ Provide only the direct answer to what was asked.
             messages.append(assistant_msg)
 
             # D. Execute tools
-            tool_results, execution_success = self._execute_tool_calls(
-                tool_blocks, tool_manager
-            )
+            tool_results, execution_success = self._execute_tool_calls(tool_blocks, tool_manager)
 
             # E. Add tool results to history
             tool_result_msg = self._create_tool_result_message(tool_results)
@@ -154,8 +148,9 @@ Provide only the direct answer to what was asked.
         )
         return final_response_text
 
-    def _call_claude_api(self, messages: List[Dict], system_content: str,
-                        tools: Optional[List]) -> Tuple[str, List]:
+    def _call_claude_api(
+        self, messages: List[Dict], system_content: str, tools: Optional[List]
+    ) -> Tuple[str, List]:
         """
         Make a single API call to Claude.
 
@@ -167,11 +162,7 @@ Provide only the direct answer to what was asked.
         Returns:
             Tuple of (response_text, tool_blocks)
         """
-        api_params = {
-            **self.base_params,
-            "messages": messages,
-            "system": system_content
-        }
+        api_params = {**self.base_params, "messages": messages, "system": system_content}
 
         # Add tools if provided
         if tools:
@@ -210,26 +201,27 @@ Provide only the direct answer to what was asked.
         for block in tool_blocks:
             try:
                 logger.info(f"执行工具: {block.name}")
-                result = tool_manager.execute_tool(
-                    block.name,
-                    **block.input
-                )
+                result = tool_manager.execute_tool(block.name, **block.input)
 
-                results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": result,
-                    "is_error": False
-                })
+                results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result,
+                        "is_error": False,
+                    }
+                )
 
             except Exception as e:
                 logger.error(f"工具 {block.name} 执行失败: {e}")
-                results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": f"错误: {str(e)}",
-                    "is_error": True
-                })
+                results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": f"错误: {str(e)}",
+                        "is_error": True,
+                    }
+                )
                 all_success = False
 
         return results, all_success
@@ -277,7 +269,7 @@ Provide only the direct answer to what was asked.
         # Add text if present
         if response_text:
             # Create a mock text block
-            text_block = type('obj', (object,), {'type': 'text', 'text': response_text})
+            text_block = type("obj", (object,), {"type": "text", "text": response_text})
             content.append(text_block)
 
         # Add tool_use blocks

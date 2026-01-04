@@ -1,8 +1,9 @@
 """Real system integration test to diagnose 'query failed' issue"""
 
-import pytest
 import os
 import sys
+
+import pytest
 
 # Mark as integration test
 pytestmark = pytest.mark.integration
@@ -19,6 +20,7 @@ class TestRealSystemIntegration:
         sys.path.insert(0, str(backend_dir))
 
         from config import config
+
         return config
 
     def test_config_has_api_key(self, real_config):
@@ -43,8 +45,7 @@ class TestRealSystemIntegration:
         # Try to connect and check collections
         try:
             client = chromadb.PersistentClient(
-                path=db_path,
-                settings=Settings(anonymized_telemetry=False)
+                path=db_path, settings=Settings(anonymized_telemetry=False)
             )
 
             # Check collections exist
@@ -79,7 +80,7 @@ class TestRealSystemIntegration:
             store = VectorStore(
                 chroma_path=real_config.CHROMA_PATH,
                 embedding_model=real_config.EMBEDDING_MODEL,
-                max_results=real_config.MAX_RESULTS
+                max_results=real_config.MAX_RESULTS,
             )
             print("✓ VectorStore initialized successfully")
 
@@ -102,7 +103,7 @@ class TestRealSystemIntegration:
                 model=real_config.ANTHROPIC_MODEL,
                 max_tokens=10,
                 temperature=0,
-                messages=[{"role": "user", "content": "Say 'OK' if you can read this"}]
+                messages=[{"role": "user", "content": "Say 'OK' if you can read this"}],
             )
 
             assert response.content[0].text, "No response from API"
@@ -122,7 +123,7 @@ class TestRealSystemIntegration:
 
             # Try a real query
             answer, sources = rag.query("What is RAG?")
-            print(f"✓ Query executed successfully")
+            print("✓ Query executed successfully")
             print(f"  Answer length: {len(answer)} chars")
             print(f"  Sources count: {len(sources)}")
             print(f"  First 100 chars of answer: {answer[:100]}...")
@@ -136,16 +137,13 @@ class TestRealSystemIntegration:
 
     def test_error_message_format(self, real_config):
         """Test: Check what error message the system returns"""
-        from fastapi.testclient import TestClient
         from app import app
+        from fastapi.testclient import TestClient
 
         client = TestClient(app)
 
         try:
-            response = client.post(
-                "/api/query",
-                json={"query": "What is RAG?"}
-            )
+            response = client.post("/api/query", json={"query": "What is RAG?"})
 
             print(f"Response status code: {response.status_code}")
 
@@ -153,7 +151,7 @@ class TestRealSystemIntegration:
                 print(f"Response detail: {response.json()}")
             else:
                 data = response.json()
-                print(f"✓ Query succeeded")
+                print("✓ Query succeeded")
                 print(f"  Answer preview: {data.get('answer', '')[:100]}...")
                 print(f"  Sources: {data.get('sources', [])}")
 

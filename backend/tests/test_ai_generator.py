@@ -1,7 +1,9 @@
 """Tests for AIGenerator tool calling mechanism"""
 
+from unittest.mock import MagicMock, Mock, call, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch, call
+
 from ai_generator import AIGenerator
 
 
@@ -19,7 +21,7 @@ class TestAIGeneratorToolCalls:
     @pytest.fixture
     def ai_generator(self, mock_anthropic_client):
         """Create AIGenerator instance"""
-        with patch('ai_generator.anthropic.Anthropic', return_value=mock_anthropic_client):
+        with patch("ai_generator.anthropic.Anthropic", return_value=mock_anthropic_client):
             generator = AIGenerator(api_key="test-key", model="claude-test")
             generator.client = mock_anthropic_client
             return generator
@@ -40,10 +42,7 @@ class TestAIGeneratorToolCalls:
         mock_anthropic_client.messages.create.return_value = mock_response
 
         # Execute query
-        result = ai_generator.generate_response(
-            query="What is your name?",
-            tools=None
-        )
+        result = ai_generator.generate_response(query="What is your name?", tools=None)
 
         # Verify
         assert result == "Hello! How can I help you?"
@@ -58,10 +57,7 @@ class TestAIGeneratorToolCalls:
         tool_use_block.type = "tool_use"
         tool_use_block.name = "search_course_content"
         tool_use_block.id = "toolu_123"
-        tool_use_block.input = {
-            "query": "embeddings",
-            "course_name": None
-        }
+        tool_use_block.input = {"query": "embeddings", "course_name": None}
 
         initial_response = Mock()
         initial_response.stop_reason = "tool_use"
@@ -76,23 +72,18 @@ class TestAIGeneratorToolCalls:
         final_response.content = [final_text_block]
 
         # Set mock return sequence
-        mock_anthropic_client.messages.create.side_effect = [
-            initial_response,
-            final_response
-        ]
+        mock_anthropic_client.messages.create.side_effect = [initial_response, final_response]
 
         # Execute query
         result = ai_generator.generate_response(
             query="Tell me about embeddings",
             tools=[{"name": "search_course_content", "description": "test"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Verify tool was called
         mock_tool_manager.execute_tool.assert_called_once_with(
-            "search_course_content",
-            query="embeddings",
-            course_name=None
+            "search_course_content", query="embeddings", course_name=None
         )
 
         # Verify final result is returned
@@ -101,7 +92,9 @@ class TestAIGeneratorToolCalls:
         # Verify API was called twice
         assert mock_anthropic_client.messages.create.call_count == 2
 
-    def test_tool_execution_error_propagation(self, ai_generator, mock_anthropic_client, mock_tool_manager):
+    def test_tool_execution_error_propagation(
+        self, ai_generator, mock_anthropic_client, mock_tool_manager
+    ):
         """Test: Tool execution failure error handling"""
         # Mock tool execution returns error
         mock_tool_manager.execute_tool.return_value = "Error: Course not found"
@@ -124,16 +117,13 @@ class TestAIGeneratorToolCalls:
         final_text_block.text = "I couldn't find information about that topic."
         final_response.content = [final_text_block]
 
-        mock_anthropic_client.messages.create.side_effect = [
-            initial_response,
-            final_response
-        ]
+        mock_anthropic_client.messages.create.side_effect = [initial_response, final_response]
 
         # Execute query
         result = ai_generator.generate_response(
             query="test query",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Verify tool error was passed to Claude
@@ -174,16 +164,11 @@ class TestAIGeneratorToolCalls:
         final_text.text = "Final answer"
         final_response.content = [final_text]
 
-        mock_anthropic_client.messages.create.side_effect = [
-            initial_response,
-            final_response
-        ]
+        mock_anthropic_client.messages.create.side_effect = [initial_response, final_response]
 
         # Execute
         result = ai_generator.generate_response(
-            query="test",
-            tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            query="test", tools=[{"name": "search_course_content"}], tool_manager=mock_tool_manager
         )
 
         # Verify both tools were executed
@@ -201,10 +186,7 @@ class TestAIGeneratorToolCalls:
 
         history = "User: Previous question\nAssistant: Previous answer"
 
-        ai_generator.generate_response(
-            query="New question",
-            conversation_history=history
-        )
+        ai_generator.generate_response(query="New question", conversation_history=history)
 
         # Verify system prompt includes history
         call_args = mock_anthropic_client.messages.create.call_args
@@ -225,11 +207,7 @@ class TestAIGeneratorToolCalls:
 
         tools = [{"name": "search_course_content", "description": "test"}]
 
-        ai_generator.generate_response(
-            query="test",
-            tools=tools,
-            tool_manager=mock_tool_manager
-        )
+        ai_generator.generate_response(query="test", tools=tools, tool_manager=mock_tool_manager)
 
         # Verify tool_choice is set
         call_args = mock_anthropic_client.messages.create.call_args
@@ -284,7 +262,7 @@ class TestMultiRoundToolCalling:
     @pytest.fixture
     def ai_generator(self, mock_anthropic_client):
         """Create AIGenerator instance"""
-        with patch('ai_generator.anthropic.Anthropic', return_value=mock_anthropic_client):
+        with patch("ai_generator.anthropic.Anthropic", return_value=mock_anthropic_client):
             generator = AIGenerator(api_key="test-key", model="claude-test")
             generator.client = mock_anthropic_client
             return generator
@@ -332,26 +310,23 @@ class TestMultiRoundToolCalling:
         mock_anthropic_client.messages.create.side_effect = [
             response_round1,  # First API call
             response_round2,  # Second API call (after first tool result)
-            final_response    # Final call (after second tool result)
+            final_response,  # Final call (after second tool result)
         ]
 
         # Execute query
         result = ai_generator.generate_response(
             query="Find information about neural networks in the Machine Learning course",
             tools=[{"name": "get_course_outline"}, {"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Verify both tools were called
         assert mock_tool_manager.execute_tool.call_count == 2
         mock_tool_manager.execute_tool.assert_any_call(
-            "get_course_outline",
-            course_name="Machine Learning"
+            "get_course_outline", course_name="Machine Learning"
         )
         mock_tool_manager.execute_tool.assert_any_call(
-            "search_course_content",
-            query="neural networks",
-            course_name=None
+            "search_course_content", query="neural networks", course_name=None
         )
 
         # Verify final result
@@ -360,7 +335,9 @@ class TestMultiRoundToolCalling:
         # Verify 3 API calls were made (2 rounds + 1 final)
         assert mock_anthropic_client.messages.create.call_count == 3
 
-    def test_single_round_tool_calling(self, ai_generator, mock_anthropic_client, mock_tool_manager):
+    def test_single_round_tool_calling(
+        self, ai_generator, mock_anthropic_client, mock_tool_manager
+    ):
         """Test: Claude completes task in 1 round, no additional tools needed"""
         # Single tool call
         tool_use = Mock()
@@ -381,16 +358,13 @@ class TestMultiRoundToolCalling:
         text_block.text = "Here's what I found about embeddings..."
         second_response.content = [text_block]
 
-        mock_anthropic_client.messages.create.side_effect = [
-            first_response,
-            second_response
-        ]
+        mock_anthropic_client.messages.create.side_effect = [first_response, second_response]
 
         # Execute
         result = ai_generator.generate_response(
             query="Tell me about embeddings",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Verify tool was called once
@@ -399,7 +373,9 @@ class TestMultiRoundToolCalling:
         # Verify 2 API calls (1 round + 1 final response)
         assert mock_anthropic_client.messages.create.call_count == 2
 
-    def test_max_rounds_limit_enforced(self, ai_generator, mock_anthropic_client, mock_tool_manager):
+    def test_max_rounds_limit_enforced(
+        self, ai_generator, mock_anthropic_client, mock_tool_manager
+    ):
         """Test: System enforces maximum 2 rounds even if Claude wants more"""
         # Round 1
         tool_use_1 = Mock()
@@ -432,17 +408,13 @@ class TestMultiRoundToolCalling:
         text_block.text = "I've completed 2 rounds of searches. Here's the summary..."
         final_response.content = [text_block]
 
-        mock_anthropic_client.messages.create.side_effect = [
-            response_1,
-            response_2,
-            final_response
-        ]
+        mock_anthropic_client.messages.create.side_effect = [response_1, response_2, final_response]
 
         # Execute
         result = ai_generator.generate_response(
             query="Complex multi-part query",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Verify exactly 2 tools were executed (max rounds)
@@ -455,7 +427,9 @@ class TestMultiRoundToolCalling:
         final_call_kwargs = mock_anthropic_client.messages.create.call_args_list[2].kwargs
         assert "tools" not in final_call_kwargs or final_call_kwargs.get("tools") is None
 
-    def test_tool_execution_error_handling(self, ai_generator, mock_anthropic_client, mock_tool_manager):
+    def test_tool_execution_error_handling(
+        self, ai_generator, mock_anthropic_client, mock_tool_manager
+    ):
         """Test: Tool execution errors are passed to Claude for recovery attempt"""
         # Round 1: Tool fails
         tool_use_1 = Mock()
@@ -485,7 +459,7 @@ class TestMultiRoundToolCalling:
         # Mock second tool success
         mock_tool_manager.execute_tool.side_effect = [
             "Error: Course not found",
-            "Found relevant content..."
+            "Found relevant content...",
         ]
 
         final_response = Mock()
@@ -495,17 +469,13 @@ class TestMultiRoundToolCalling:
         text_block.text = "Although the specific course wasn't found, I found related content..."
         final_response.content = [text_block]
 
-        mock_anthropic_client.messages.create.side_effect = [
-            response_1,
-            response_2,
-            final_response
-        ]
+        mock_anthropic_client.messages.create.side_effect = [response_1, response_2, final_response]
 
         # Execute
         result = ai_generator.generate_response(
             query="Search for content",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Verify both tool attempts were made
@@ -514,7 +484,9 @@ class TestMultiRoundToolCalling:
         # Verify error was handled gracefully
         assert "Although the specific course wasn't found" in result
 
-    def test_no_tool_use_returns_directly(self, ai_generator, mock_anthropic_client, mock_tool_manager):
+    def test_no_tool_use_returns_directly(
+        self, ai_generator, mock_anthropic_client, mock_tool_manager
+    ):
         """Test: If Claude doesn't request tools, return immediately"""
         response = Mock()
         response.stop_reason = "end_turn"
@@ -529,7 +501,7 @@ class TestMultiRoundToolCalling:
         result = ai_generator.generate_response(
             query="What is 2+2?",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Verify no tools were called
@@ -541,7 +513,9 @@ class TestMultiRoundToolCalling:
         # Verify direct response
         assert result == "I can answer that from my knowledge."
 
-    def test_message_history_across_rounds(self, ai_generator, mock_anthropic_client, mock_tool_manager):
+    def test_message_history_across_rounds(
+        self, ai_generator, mock_anthropic_client, mock_tool_manager
+    ):
         """Test: Multiple rounds of tool calling work correctly"""
         # This test verifies that multi-round tool calling produces correct results
         # by checking that both tools are executed and final response is returned
@@ -576,17 +550,13 @@ class TestMultiRoundToolCalling:
         text_block.text = "Final answer based on both tool results"
         final_response.content = [text_block]
 
-        mock_anthropic_client.messages.create.side_effect = [
-            response_1,
-            response_2,
-            final_response
-        ]
+        mock_anthropic_client.messages.create.side_effect = [response_1, response_2, final_response]
 
         # Execute
         result = ai_generator.generate_response(
             query="Find info in Test Course",
             tools=[{"name": "get_course_outline"}, {"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Verify both tools were executed in sequence

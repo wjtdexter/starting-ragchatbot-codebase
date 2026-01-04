@@ -1,9 +1,10 @@
 """Tests for FastAPI endpoints"""
 
+from unittest.mock import Mock, patch
+
 import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import patch, Mock
 from app import app
+from fastapi.testclient import TestClient
 
 
 class TestQueryEndpoint:
@@ -17,17 +18,14 @@ class TestQueryEndpoint:
     @pytest.fixture
     def mock_rag_system(self):
         """Mock RAGSystem"""
-        with patch('app.rag_system') as mock:
+        with patch("app.rag_system") as mock:
             mock.session_manager.create_session = Mock(return_value="session_123")
             mock.query = Mock(return_value=("Answer text", ["Source 1"]))
             yield mock
 
     def test_query_endpoint_success(self, client, mock_rag_system):
         """Test: Successful query request"""
-        response = client.post(
-            "/api/query",
-            json={"query": "What is RAG?"}
-        )
+        response = client.post("/api/query", json={"query": "What is RAG?"})
 
         # Verify response
         assert response.status_code == 200
@@ -37,31 +35,21 @@ class TestQueryEndpoint:
         assert data["session_id"] == "session_123"
 
         # Verify RAG system was called
-        mock_rag_system.query.assert_called_once_with(
-            "What is RAG?",
-            "session_123"
-        )
+        mock_rag_system.query.assert_called_once_with("What is RAG?", "session_123")
 
     def test_query_endpoint_with_existing_session(self, client, mock_rag_system):
         """Test: Query with existing session_id"""
         mock_rag_system.query.return_value = ("Answer", ["Source"])
 
         response = client.post(
-            "/api/query",
-            json={
-                "query": "Follow up question",
-                "session_id": "existing_session"
-            }
+            "/api/query", json={"query": "Follow up question", "session_id": "existing_session"}
         )
 
         # Verify new session is NOT created
         assert not mock_rag_system.session_manager.create_session.called
 
         # Verify existing session is used
-        mock_rag_system.query.assert_called_once_with(
-            "Follow up question",
-            "existing_session"
-        )
+        mock_rag_system.query.assert_called_once_with("Follow up question", "existing_session")
 
         assert response.status_code == 200
 
@@ -70,10 +58,7 @@ class TestQueryEndpoint:
         # Mock RAG system exception
         mock_rag_system.query.side_effect = Exception("ChromaDB connection failed")
 
-        response = client.post(
-            "/api/query",
-            json={"query": "test"}
-        )
+        response = client.post("/api/query", json={"query": "test"})
 
         # Verify 500 error
         assert response.status_code == 500
@@ -83,20 +68,14 @@ class TestQueryEndpoint:
 
     def test_query_endpoint_missing_query(self, client):
         """Test: Missing query parameter"""
-        response = client.post(
-            "/api/query",
-            json={"session_id": "session_1"}
-        )
+        response = client.post("/api/query", json={"session_id": "session_1"})
 
         # FastAPI auto-validation returns 422
         assert response.status_code == 422
 
     def test_query_endpoint_empty_query(self, client):
         """Test: Empty query string"""
-        response = client.post(
-            "/api/query",
-            json={"query": ""}
-        )
+        response = client.post("/api/query", json={"query": ""})
 
         # Should still be 422 (validation error)
         # or 200 if empty strings are allowed
@@ -106,10 +85,7 @@ class TestQueryEndpoint:
         """Test: Query with special characters"""
         mock_rag_system.query.return_value = ("Special answer", ["Source"])
 
-        response = client.post(
-            "/api/query",
-            json={"query": "What about RAG & AI? Test <tag>"}
-        )
+        response = client.post("/api/query", json={"query": "What about RAG & AI? Test <tag>"})
 
         # Should handle special characters
         assert response.status_code == 200
@@ -127,11 +103,11 @@ class TestCoursesEndpoint:
     @pytest.fixture
     def mock_rag_system(self):
         """Mock RAGSystem"""
-        with patch('app.rag_system') as mock:
+        with patch("app.rag_system") as mock:
             mock.get_course_analytics = Mock(
                 return_value={
                     "total_courses": 5,
-                    "course_titles": ["Course 1", "Course 2", "Course 3"]
+                    "course_titles": ["Course 1", "Course 2", "Course 3"],
                 }
             )
             yield mock
@@ -151,7 +127,7 @@ class TestCoursesEndpoint:
         """Test: No courses available"""
         mock_rag_system.get_course_analytics.return_value = {
             "total_courses": 0,
-            "course_titles": []
+            "course_titles": [],
         }
 
         response = client.get("/api/courses")

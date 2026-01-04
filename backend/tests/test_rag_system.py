@@ -1,7 +1,9 @@
 """Tests for RAGSystem query end-to-end flow"""
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+
 from rag_system import RAGSystem
 
 
@@ -25,10 +27,12 @@ class TestRAGSystemQuery:
     @pytest.fixture
     def rag_system(self, mock_config):
         """Create RAGSystem instance with Mock components"""
-        with patch('rag_system.DocumentProcessor'), \
-             patch('rag_system.VectorStore') as mock_vs, \
-             patch('rag_system.AIGenerator') as mock_ai, \
-             patch('rag_system.SessionManager'):
+        with (
+            patch("rag_system.DocumentProcessor"),
+            patch("rag_system.VectorStore") as mock_vs,
+            patch("rag_system.AIGenerator") as mock_ai,
+            patch("rag_system.SessionManager"),
+        ):
 
             system = RAGSystem(mock_config)
 
@@ -58,9 +62,7 @@ class TestRAGSystemQuery:
 
         # Verify session history is recorded
         rag_system.session_manager.add_exchange.assert_called_once_with(
-            "session_1",
-            "What is RAG?",
-            "Test response"
+            "session_1", "What is RAG?", "Test response"
         )
 
     def test_query_without_session(self, rag_system):
@@ -103,7 +105,7 @@ class TestRAGSystemQuery:
         rag_system.ai_generator.generate_response.return_value = "Based on the search..."
         rag_system.tool_manager.get_last_sources.return_value = [
             '<a href="http://example.com">Course - Lesson 1</a>',
-            '<a href="http://example.com">Course - Lesson 2</a>'
+            '<a href="http://example.com">Course - Lesson 2</a>',
         ]
 
         answer, sources = rag_system.query("Tell me about embeddings")

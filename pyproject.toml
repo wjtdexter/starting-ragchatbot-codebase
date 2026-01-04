@@ -20,3 +20,53 @@ dependencies = [
     "easyocr>=1.7.2",
     "pymupdf>=1.26.7",
 ]
+
+[dependency-groups]
+dev = [
+    "black>=25.12.0",
+    "flake8>=7.3.0",
+    "flake8-bugbear>=25.11.29",
+    "flake8-docstrings>=1.7.0",
+    "isort>=7.0.0",
+    "pep8-naming>=0.15.1",
+]
+
+# ========== 代码质量工具配置 ==========
+
+[tool.black]
+line-length = 100
+target-version = ['py313']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | chroma_db
+  | frontend
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["models", "config", "rag_system", "document_processor",
+                     "vector_store", "ai_generator", "search_tools", "session_manager"]
+known_third_party = ["fastapi", "pydantic", "anthropic", "chromadb",
+                     "sentence_transformers", "pytest"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+skip = [".gitignore", ".dockerignore"]
+skip_glob = ["frontend/*", "chroma_db/*"]
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503", "E501"]
+exclude = [".git", "__pycache__", "venv", "build", "dist", "chroma_db", "frontend"]
+max-complexity = 10

@@ -1,30 +1,26 @@
-"""Tests for FastAPI endpoints"""
+"""
+Tests for FastAPI endpoints using the test app fixture.
+
+This module has been updated to use the test_app fixture from conftest.py
+to avoid issues with static file mounting in test environments.
+"""
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, Mock
-from app import app
+
+
+pytestmark = pytest.mark.api
 
 
 class TestQueryEndpoint:
     """Test /api/query endpoint"""
 
-    @pytest.fixture
-    def client(self):
-        """Create test client"""
-        return TestClient(app)
-
-    @pytest.fixture
-    def mock_rag_system(self):
-        """Mock RAGSystem"""
-        with patch('app.rag_system') as mock:
-            mock.session_manager.create_session = Mock(return_value="session_123")
-            mock.query = Mock(return_value=("Answer text", ["Source 1"]))
-            yield mock
-
-    def test_query_endpoint_success(self, client, mock_rag_system):
+    def test_query_endpoint_success(self, test_client: TestClient, test_app):
         """Test: Successful query request"""
-        response = client.post(
+        # Configure mock to return specific values
+        test_app.state.mock_rag.query.return_value = ("Answer text", ["Source 1"])
+
+        response = test_client.post(
             "/api/query",
             json={"query": "What is RAG?"}
         )
@@ -34,19 +30,19 @@ class TestQueryEndpoint:
         data = response.json()
         assert data["answer"] == "Answer text"
         assert data["sources"] == ["Source 1"]
-        assert data["session_id"] == "session_123"
+        assert data["session_id"] == "test_session"
 
         # Verify RAG system was called
-        mock_rag_system.query.assert_called_once_with(
+        test_app.state.mock_rag.query.assert_called_once_with(
             "What is RAG?",
-            "session_123"
+            "test_session"
         )
 
-    def test_query_endpoint_with_existing_session(self, client, mock_rag_system):
+    def test_query_endpoint_with_existing_session(self, test_client: TestClient, test_app):
         """Test: Query with existing session_id"""
-        mock_rag_system.query.return_value = ("Answer", ["Source"])
+        test_app.state.mock_rag.query.return_value = ("Answer", ["Source"])
 
-        response = client.post(
+        response = test_client.post(
             "/api/query",
             json={
                 "query": "Follow up question",
@@ -55,22 +51,22 @@ class TestQueryEndpoint:
         )
 
         # Verify new session is NOT created
-        assert not mock_rag_system.session_manager.create_session.called
+        assert not test_app.state.mock_rag.session_manager.create_session.called
 
         # Verify existing session is used
-        mock_rag_system.query.assert_called_once_with(
+        test_app.state.mock_rag.query.assert_called_once_with(
             "Follow up question",
             "existing_session"
         )
 
         assert response.status_code == 200
 
-    def test_query_endpoint_rag_exception(self, client, mock_rag_system):
+    def test_query_endpoint_rag_exception(self, test_client: TestClient, test_app):
         """Test: RAG system exception"""
         # Mock RAG system exception
-        mock_rag_system.query.side_effect = Exception("ChromaDB connection failed")
+        test_app.state.mock_rag.query.side_effect = Exception("ChromaDB connection failed")
 
-        response = client.post(
+        response = test_client.post(
             "/api/query",
             json={"query": "test"}
         )
@@ -81,9 +77,9 @@ class TestQueryEndpoint:
         assert "detail" in data
         assert "ChromaDB connection failed" in data["detail"]
 
-    def test_query_endpoint_missing_query(self, client):
+    def test_query_endpoint_missing_query(self, test_client: TestClient):
         """Test: Missing query parameter"""
-        response = client.post(
+        response = test_client.post(
             "/api/query",
             json={"session_id": "session_1"}
         )
@@ -91,9 +87,9 @@ class TestQueryEndpoint:
         # FastAPI auto-validation returns 422
         assert response.status_code == 422
 
-    def test_query_endpoint_empty_query(self, client):
+    def test_query_endpoint_empty_query(self, test_client: TestClient):
         """Test: Empty query string"""
-        response = client.post(
+        response = test_client.post(
             "/api/query",
             json={"query": ""}
         )
@@ -102,11 +98,11 @@ class TestQueryEndpoint:
         # or 200 if empty strings are allowed
         assert response.status_code in [200, 422]
 
-    def test_query_endpoint_special_characters(self, client, mock_rag_system):
+    def test_query_endpoint_special_characters(self, test_client: TestClient, test_app):
         """Test: Query with special characters"""
-        mock_rag_system.query.return_value = ("Special answer", ["Source"])
+        test_app.state.mock_rag.query.return_value = ("Special answer", ["Source"])
 
-        response = client.post(
+        response = test_client.post(
             "/api/query",
             json={"query": "What about RAG & AI? Test <tag>"}
         )
@@ -119,26 +115,14 @@ class TestQueryEndpoint:
 class TestCoursesEndpoint:
     """Test /api/courses endpoint"""
 
-    @pytest.fixture
-    def client(self):
-        """Create test client"""
-        return TestClient(app)
-
-    @pytest.fixture
-    def mock_rag_system(self):
-        """Mock RAGSystem"""
-        with patch('app.rag_system') as mock:
-            mock.get_course_analytics = Mock(
-                return_value={
-                    "total_courses": 5,
-                    "course_titles": ["Course 1", "Course 2", "Course 3"]
-                }
-            )
-            yield mock
-
-    def test_courses_endpoint_success(self, client, mock_rag_system):
+    def test_courses_endpoint_success(self, test_client: TestClient, test_app):
         """Test: Successful course stats request"""
-        response = client.get("/api/courses")
+        test_app.state.mock_rag.get_course_analytics.return_value = {
+            "total_courses": 5,
+            "course_titles": ["Course 1", "Course 2", "Course 3"]
+        }
+
+        response = test_client.get("/api/courses")
 
         # Verify response
         assert response.status_code == 200
@@ -147,44 +131,38 @@ class TestCoursesEndpoint:
         assert data["course_titles"] == ["Course 1", "Course 2", "Course 3"]
         assert len(data["course_titles"]) == 3
 
-    def test_courses_endpoint_empty(self, client, mock_rag_system):
+    def test_courses_endpoint_empty(self, test_client: TestClient, test_app):
         """Test: No courses available"""
-        mock_rag_system.get_course_analytics.return_value = {
+        test_app.state.mock_rag.get_course_analytics.return_value = {
             "total_courses": 0,
             "course_titles": []
         }
 
-        response = client.get("/api/courses")
+        response = test_client.get("/api/courses")
 
         assert response.status_code == 200
         data = response.json()
         assert data["total_courses"] == 0
         assert data["course_titles"] == []
 
-    def test_courses_endpoint_exception(self, client, mock_rag_system):
+    def test_courses_endpoint_exception(self, test_client: TestClient, test_app):
         """Test: Exception handling"""
-        mock_rag_system.get_course_analytics.side_effect = Exception("Database error")
+        test_app.state.mock_rag.get_course_analytics.side_effect = Exception("Database error")
 
-        response = client.get("/api/courses")
+        response = test_client.get("/api/courses")
 
         assert response.status_code == 500
         data = response.json()
         assert "Database error" in data["detail"]
 
 
-class TestStaticFiles:
-    """Test static file serving"""
+class TestRootEndpoint:
+    """Test root endpoint"""
 
-    @pytest.fixture
-    def client(self):
-        """Create test client"""
-        return TestClient(app)
+    def test_root_endpoint(self, test_client: TestClient):
+        """Test: Root endpoint returns API info"""
+        response = test_client.get("/")
 
-    def test_frontend_served(self, client):
-        """Test: Frontend index.html is served"""
-        # Note: This test might fail if frontend files don't exist in test environment
-        # In that case, we can mock the static file mounting
-        response = client.get("/")
-
-        # Should return 200 or 404 depending on whether frontend exists
-        assert response.status_code in [200, 404]
+        assert response.status_code == 200
+        data = response.json()
+        assert "message" in data

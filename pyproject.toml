@@ -20,3 +20,27 @@ dependencies = [
     "easyocr>=1.7.2",
     "pymupdf>=1.26.7",
 ]
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+addopts = [
+    "-ra",
+    "-q",
+    "--strict-markers",
+    "--cov=backend",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--asyncio-mode=auto"
+]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::ResourceWarning"
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "api: API endpoint tests",
+    "slow: Slow running tests"
+]
